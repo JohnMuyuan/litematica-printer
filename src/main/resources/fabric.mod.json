@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "icon": "assets/litematica-printer/icon.png",
+  "name": "${mod_name}",
+  "description": "面向 Litematica 的高性能自动化施工工具，支持批量放置、挖掘、填充、排流体、区域清除、破基岩，以及掉落物吸附与潜影盒收纳；兼容单人游戏和安装服务端伴生模组的多人服务器。",
+  "authors": [
+    "JohnMuyuan"
+  ],
+  "license": "${mod_license}",
+  "contact": {
+    "homepage": "${mod_homepage}",
+    "sources": "${mod_sources}",
+    "issues": "${mod_homepage}/issues"
+  },
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "me.aleksilassila.litematica.printer.LitematicaPrinterMod"
+    ],
+    "client": [
+      "me.aleksilassila.litematica.printer.LitematicaPrinterMod"
+    ],
+    "modmenu": [
+      "me.aleksilassila.litematica.printer.config.ModMenu"
+    ]
+  },
+  "mixins": [
+    "litematica-printer.mixins.json"
+  ],
+  "depends": {
+    "minecraft": "${minecraft_dependency}",
+    "fabricloader": ">=${loader_version}",
+    "java": ">=${java_dependency}",
+    "malilib": ">=${malilib}",
+    "litematica": ">=${litematica}",
+    "fabric-api": ">=${fabric_api_version}"
+  },
+  "suggests": {
+    "quickshulker": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "parent": "${mod_wrapper_id}"
+    }
+  }
+}

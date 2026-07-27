@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_wrapper_id}",
+  "version": "${mod_version}",
+  "icon": "assets/${mod_wrapper_id}/icon.png",
+  "name": "${mod_name}",
+  "description": "面向 Litematica 的高性能自动化施工工具，支持批量放置、挖掘、填充、排流体、区域清除、破基岩，以及掉落物吸附与潜影盒收纳；兼容单人游戏和安装服务端伴生模组的多人服务器。",
+  "authors": [
+    "JohnMuyuan"
+  ],
+  "license": "${mod_license}",
+  "environment": "*",
+  "entrypoints": {
+  },
+  "depends": {
+    "litematica-printer": "*",
+    "malilib": "*",
+    "litematica": "*",
+    "fabric-api": "*"
+  }
+}

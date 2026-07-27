@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "litematica-printer-server",
+  "version": "${version}",
+  "name": "Litematica Printer Server Companion",
+  "description": "Server-side validated batching for Litematica Printer work actions and item pickup.",
+  "authors": [
+    "JohnMuyuan"
+  ],
+  "license": "AGPL-3.0",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "me.aleksilassila.litematica.printer.server.PrinterServerMod"
+    ]
+  },
+  "depends": {
+    "minecraft": ">=26.1.2 <26.2",
+    "fabricloader": ">=0.19.1",
+    "fabric-api": "*",
+    "java": ">=25"
+  },
+  "suggests": {
+    "quickshulker": "*"
+  }
+}

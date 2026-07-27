@@ -1,0 +1,71 @@
+name: build
+
+on:
+  push:
+    paths-ignore: ['*.md']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  IS_THIS_RELEASE: false
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Cache Loom workspace
+        uses: actions/cache@v5
+        with:
+          path: |
+            ./.gradle/loom-cache
+            ./libs
+          key: ${{ runner.os }}-loom-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', '**/*.gradle.kts', '**/gradle.properties', 'buildSrc/**') }}
+          restore-keys: |
+            ${{ runner.os }}-loom-
+
+      - name: Make gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build Minecraft 26.1.2 client and server companion
+        env:
+          TARGET_MC_VERSIONS: 26.1
+        run: ./gradlew :26.1:build :serverCompanion:build --stacktrace --console=plain
+
+      - name: Delete sources jars
+        run: |
+          find versions/26.1/build/libs/ serverCompanion/build/libs/ -name "*-sources.jar" -delete
+
+      - name: Capture client jar
+        uses: actions/upload-artifact@v7
+        with:
+          name: litematica-printer-client-26.1.2
+          path: versions/26.1/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 1
+          archive: false
+
+      - name: Capture server companion jar
+        uses: actions/upload-artifact@v7
+        with:
+          name: litematica-printer-server-26.1.2
+          path: serverCompanion/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 1
+          archive: false
