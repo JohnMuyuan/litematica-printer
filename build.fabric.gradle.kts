@@ -119,6 +119,114 @@ loom {
 }
 
 tasks {
+    test {
+        failOnNoDiscoveredTests = false
+    }
+
+    val clearTargetAttemptLedgerTest = register<JavaExec>("clearTargetAttemptLedgerTest") {
+        group = "verification"
+        description = "Runs the automatic clear retry regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.clear.ClearTargetAttemptLedgerTest")
+        dependsOn("testClasses")
+    }
+    val workSectionCoordinatorTest = register<JavaExec>("workSectionCoordinatorTest") {
+        group = "verification"
+        description = "Runs the automatic work-section stability regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.pathing.WorkSectionCoordinatorTest")
+        dependsOn("testClasses")
+    }
+    val moduleStageStatusResolverTest = register<JavaExec>("moduleStageStatusResolverTest") {
+        group = "verification"
+        description = "Runs the finite clear-pass settlement regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.ModuleStageStatusResolverTest")
+        dependsOn("testClasses")
+    }
+    val mineTargetPolicyTest = register<JavaExec>("mineTargetPolicyTest") {
+        group = "verification"
+        description = "Runs the automatic Clear mining-filter regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.handlers.MineTargetPolicyTest")
+        dependsOn("testClasses")
+    }
+    val verificationTimeoutPolicyTest = register<JavaExec>("verificationTimeoutPolicyTest") {
+        group = "verification"
+        description = "Runs the automatic clear verification-timeout regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.pathing.VerificationTimeoutPolicyTest")
+        dependsOn("testClasses")
+    }
+    val bedrockClusterSelectorTest = register<JavaExec>("bedrockClusterSelectorTest") {
+        group = "verification"
+        description = "Runs the dense bedrock cluster selection regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.pathing.BedrockClusterSelectorTest")
+        dependsOn("testClasses")
+    }
+    val bedrockBatchGatePolicyTest = register<JavaExec>("bedrockBatchGatePolicyTest") {
+        group = "verification"
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.pathing.BedrockBatchGatePolicyTest")
+        dependsOn("testClasses")
+    }
+    val autoClearDisplayPolicyTest = register<JavaExec>("autoClearDisplayPolicyTest") {
+        group = "verification"
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.clear.AutoClearDisplayPolicyTest")
+        dependsOn("testClasses")
+    }
+    val mineDestroyChannelPolicyTest = register<JavaExec>("mineDestroyChannelPolicyTest") {
+        group = "verification"
+        description = "Runs the single slow-destroy-channel regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.handlers.MineDestroyChannelPolicyTest")
+        dependsOn("testClasses")
+    }
+
+    val initializationRecoveryPolicyTest = register<JavaExec>("initializationRecoveryPolicyTest") {
+        group = "verification"
+        description = "Runs the stalled bedrock-machine initialization recovery check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.handlers.bedrock.InitializationRecoveryPolicyTest")
+        dependsOn("testClasses")
+    }
+
+    val bedrockBatchStationPolicyTest = register<JavaExec>("bedrockBatchStationPolicyTest") {
+        group = "verification"
+        description = "Runs the true bedrock batch-station coverage regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.pathing.BedrockBatchStationPolicyTest")
+        dependsOn("testClasses")
+    }
+
+    val bedrockLocalProximityPolicyTest = register<JavaExec>("bedrockLocalProximityPolicyTest") {
+        group = "verification"
+        description = "Runs the one-block local bedrock proximity regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.pathing.BedrockLocalProximityPolicyTest")
+        dependsOn("testClasses")
+    }
+
+    val bedrockWorkstationClearancePolicyTest = register<JavaExec>("bedrockWorkstationClearancePolicyTest") {
+        group = "verification"
+        description = "Runs the player-blocking-bedrock-machine regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.pathing.BedrockWorkstationClearancePolicyTest")
+        dependsOn("testClasses")
+    }
+    val automationPauseWatchdogTest = register<JavaExec>("automationPauseWatchdogTest") {
+        group = "verification"
+        description = "Runs the stale scheduler-pause recovery regression check."
+        classpath = sourceSets.test.get().runtimeClasspath
+        mainClass.set("me.aleksilassila.litematica.printer.handler.AutomationPauseWatchdogTest")
+        dependsOn("testClasses")
+    }
+    check {
+        dependsOn(clearTargetAttemptLedgerTest, workSectionCoordinatorTest, moduleStageStatusResolverTest, mineTargetPolicyTest, verificationTimeoutPolicyTest, bedrockClusterSelectorTest, bedrockBatchGatePolicyTest, bedrockBatchStationPolicyTest, bedrockLocalProximityPolicyTest, bedrockWorkstationClearancePolicyTest, autoClearDisplayPolicyTest, mineDestroyChannelPolicyTest, initializationRecoveryPolicyTest, automationPauseWatchdogTest)
+    }
+
     register<Copy>("buildAndCollect") {
         group = "build"
         val collectedJarDir = rootProject.layout.buildDirectory.dir("libs/$modVersion/${project.name}")

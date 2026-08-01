@@ -15,6 +15,7 @@ import me.aleksilassila.litematica.printer.mixin_extension.BlockBreakResult;
 import me.aleksilassila.litematica.printer.printer.ActionManager;
 import me.aleksilassila.litematica.printer.printer.PrinterBox;
 import me.aleksilassila.litematica.printer.utils.ConfigUtils;
+import me.aleksilassila.litematica.printer.utils.FilterUtils;
 import me.aleksilassila.litematica.printer.utils.InteractionUtils;
 import me.aleksilassila.litematica.printer.utils.UsageRestrictionCache;
 import me.aleksilassila.litematica.printer.utils.mods.ModLoadUtils;
@@ -241,10 +242,39 @@ public class MineHandler extends Module {
             return false;
         }
         BlockState state = this.level.getBlockState(pos);
-        return (!ConfigUtils.isClearMode() || !state.is(Blocks.BEDROCK))
+        return (!ConfigUtils.usesClearPipeline() || !state.is(Blocks.BEDROCK))
                 && this.canReachIterationPosition(pos)
                 && InteractionUtils.canBreakBlock(pos)
-                && mineRestriction(state);
+                && targetRestrictionAllows(state);
+    }
+
+    public void updateAutoClearContext(me.aleksilassila.litematica.printer.handler.TickContext context) {
+        this.updateVariables(context);
+    }
+
+    /** Candidate check used by automatic clearing; it intentionally omits local reach/cooldown checks. */
+    public boolean isPotentialAutoTarget(BlockPos pos) {
+        if (pos == null || this.level == null) {
+            return false;
+        }
+        BlockState state = this.level.getBlockState(pos);
+        if (state.isAir() || state.getBlock() instanceof LiquidBlock || state.is(Blocks.BEDROCK)) {
+            return false;
+        }
+        if (Configs.Break.BREAK_CHECK_HARDNESS.getBooleanValue()
+                && state.getBlock().defaultDestroyTime() < 0) {
+            return false;
+        }
+        return targetRestrictionAllows(state);
+    }
+
+    private static boolean targetRestrictionAllows(BlockState state) {
+        boolean clearPipeline = ConfigUtils.usesClearPipeline();
+        boolean clearBlacklistMatches = clearPipeline && Configs.Clear.CLEAR_MINE_BLACKLIST.getStrings().stream()
+                .anyMatch(rule -> FilterUtils.matchBlockName(rule, state));
+        boolean ordinaryRestrictionAllows = !clearPipeline && mineRestriction(state);
+        return MineTargetPolicy.restrictionAllows(
+                clearPipeline, ordinaryRestrictionAllows, clearBlacklistMatches);
     }
 
     private boolean isMineScanCandidate(BlockPos pos) {
@@ -262,7 +292,7 @@ public class MineHandler extends Module {
         if (state.isAir() || state.getBlock() instanceof LiquidBlock) {
             return false;
         }
-        if (ConfigUtils.isClearMode() && state.is(Blocks.BEDROCK)) {
+        if (ConfigUtils.usesClearPipeline() && state.is(Blocks.BEDROCK)) {
             return false;
         }
 
@@ -272,7 +302,7 @@ public class MineHandler extends Module {
 
         return this.canReachIterationPosition(pos)
                 && !this.player.blockActionRestricted(this.level, pos, this.gameMode.getPlayerMode())
-                && mineRestriction(state);
+                && targetRestrictionAllows(state);
     }
 
     private void executeToolSession(MineBreakExecutor.Target firstTarget, double nearestDistance) {

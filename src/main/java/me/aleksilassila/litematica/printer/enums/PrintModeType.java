@@ -10,6 +10,7 @@ public enum PrintModeType implements ConfigOptionListEntry<PrintModeType> {
     FILL("printMode.fill"),
     // REPLACE("printMode.replace"),
     BEDROCK("printMode.bedrock"),
+    AUTO_BEDROCK("printMode.autoBedrock"),
     CLEAR("printMode.clear");
 
     private final I18n i18n;

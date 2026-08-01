@@ -5,6 +5,7 @@ import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.enums.PrintModeType;
 import me.aleksilassila.litematica.printer.handler.HudStatsManager;
 import me.aleksilassila.litematica.printer.handler.Module;
+import me.aleksilassila.litematica.printer.handler.clear.ClearTargetAttemptLedger;
 import me.aleksilassila.litematica.printer.handler.scan.ScanCache;
 import me.aleksilassila.litematica.printer.handler.scan.ScanIntent;
 import me.aleksilassila.litematica.printer.printer.ActionManager;
@@ -25,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
@@ -45,7 +47,9 @@ public class FluidHandler extends Module {
 
     private List<String> fluidBlocks = new ArrayList<>();
     private Set<Fluid> fluids = Set.of();
+    private final ClearTargetAttemptLedger<BlockPos> clearAttempts = new ClearTargetAttemptLedger<>();
     private int observedScanConfigHash = Integer.MIN_VALUE;
+    private boolean retryLimitFailureReported;
 
     public FluidHandler() {
         super(NAME, PrintModeType.FLUID, Configs.Core.FLUID, Configs.Fluid.FLUID_SELECTION_TYPE, true);
@@ -98,6 +102,12 @@ public class FluidHandler extends Module {
     @Override
     protected void onRuntimeReset() {
         this.observedScanConfigHash = Integer.MIN_VALUE;
+        this.clearAttempts.reset();
+        this.retryLimitFailureReported = false;
+    }
+
+    public void updateAutoClearContext(me.aleksilassila.litematica.printer.handler.TickContext context) {
+        this.updateVariables(context);
     }
 
     @Override
@@ -148,13 +158,17 @@ public class FluidHandler extends Module {
                 this.getScanGuardLimit(),
                 ScanIntent.FLUID,
                 this::isTargetFluid,
-                pos -> this.canReachIterationPosition(pos) && selectionPredicate.test(pos)
+                pos -> this.canReachIterationPosition(pos)
+                        && selectionPredicate.test(pos)
+                        && (!ConfigUtils.isAutoBedrockMode() || this.isPotentialAutoTarget(pos))
         );
     }
 
     @Override
     public boolean canIterationBlockPos(BlockPos blockPos) {
-        return this.isTargetFluid(blockPos);
+        return ConfigUtils.isAutoBedrockMode()
+                ? this.isPotentialAutoTarget(blockPos)
+                : this.isTargetFluid(blockPos);
     }
 
     @Override
@@ -163,6 +177,28 @@ public class FluidHandler extends Module {
         if (!this.isTargetFluid(fluidState)) {
             setIterationConsumedEffectiveExecution(false);
             return;
+        }
+        if (ConfigUtils.isAutoBedrockMode()) {
+            HudStatsManager stats = HudStatsManager.INSTANCE;
+            HudStatsManager.BlockChangeResult blockChange = stats.consumeBlockChangeResult(
+                    HudStatsManager.Mode.FLUID, blockPos);
+            if (blockChange == HudStatsManager.BlockChangeResult.CONFIRMED) {
+                this.clearAttempts.confirmed(blockPos);
+            }
+            ClearTargetAttemptLedger.Decision decision = this.clearAttempts.decision(
+                    blockPos,
+                    stats.isBlockChangePending(HudStatsManager.Mode.FLUID, blockPos),
+                    Configs.Clear.CLEAR_MAX_RETRIES.getIntegerValue()
+            );
+            if (decision != ClearTargetAttemptLedger.Decision.ATTEMPT) {
+                setIterationConsumedEffectiveExecution(false);
+                if (decision == ClearTargetAttemptLedger.Decision.EXHAUSTED
+                        && !this.retryLimitFailureReported) {
+                    this.retryLimitFailureReported = true;
+                    HudStatsManager.INSTANCE.recordFailure(HudStatsManager.Mode.FLUID, "超过清除重试上限");
+                }
+                return;
+            }
         }
         if (!InventoryUtils.switchToItems(player, fillItemArray)) {
             HudStatsManager.INSTANCE.recordDeferred(HudStatsManager.Mode.FLUID, "缺少流体填充方块");
@@ -200,28 +236,56 @@ public class FluidHandler extends Module {
             skipIteration.set(true);
             return;
         }
-        BlockState previousState = level.getBlockState(blockPos);
+        BlockPos stablePos = blockPos.immutable();
+        BlockState previousState = level.getBlockState(stablePos);
+        AtomicBoolean deferred = new AtomicBoolean(false);
+        ActionManager.INSTANCE.setQueueCompletionListener(result -> {
+            if (!deferred.get()) {
+                return;
+            }
+            if (result.isSent()) {
+                this.recordFluidActionSent(stablePos, previousState);
+            } else {
+                HudStatsManager.INSTANCE.recordDeferred(HudStatsManager.Mode.FLUID, describeSendFailure(result));
+            }
+        });
         ActionManager.SendResult sendResult = ActionManager.INSTANCE.sendQueue(player);
         if (sendResult.isWaiting()) {
+            deferred.set(true);
             HudStatsManager.INSTANCE.recordDeferred(HudStatsManager.Mode.FLUID, "等待转头");
             skipIteration.set(true);
             return;
         }
         if (!sendResult.isSent()) {
-            String reason = sendResult == ActionManager.SendResult.OUTSIDE_WORK_AREA
-                    ? I18n.HUD_ACTION_OUTSIDE_WORK_AREA.getName().getString()
-                    : sendResult == ActionManager.SendResult.OUT_OF_REACH
-                    ? "超出玩家实际交互距离"
-                    : "放置动作未发送";
-            HudStatsManager.INSTANCE.recordDeferred(HudStatsManager.Mode.FLUID, reason);
+            HudStatsManager.INSTANCE.recordDeferred(HudStatsManager.Mode.FLUID, describeSendFailure(sendResult));
             setIterationConsumedEffectiveExecution(false);
             skipIteration.set(true);
             return;
         }
-        HudStatsManager.INSTANCE.trackExpectedBlockChange(HudStatsManager.Mode.FLUID, blockPos, previousState);
+        this.recordFluidActionSent(stablePos, previousState);
+    }
+
+    private void recordFluidActionSent(BlockPos blockPos, BlockState previousState) {
+        HudStatsManager.INSTANCE.trackExpectedBlockChange(
+                HudStatsManager.Mode.FLUID,
+                blockPos,
+                previousState,
+                ConfigUtils.isAutoBedrockMode() ? () -> this.clearAttempts.confirmed(blockPos) : null
+        );
+        if (ConfigUtils.isAutoBedrockMode()) {
+            this.clearAttempts.recordAttempt(blockPos);
+        }
         HudStatsManager.INSTANCE.recordRateUnit(HudStatsManager.Mode.FLUID, 1);
         HudStatsManager.INSTANCE.recordStatus(HudStatsManager.Mode.FLUID, "运行中");
         this.setBlockPosCooldown(blockPos, ConfigUtils.getPlaceCooldown());
+    }
+
+    private static String describeSendFailure(ActionManager.SendResult result) {
+        return result == ActionManager.SendResult.OUTSIDE_WORK_AREA
+                ? I18n.HUD_ACTION_OUTSIDE_WORK_AREA.getName().getString()
+                : result == ActionManager.SendResult.OUT_OF_REACH
+                ? "超出玩家实际交互距离"
+                : "放置动作未发送";
     }
 
     private Direction findPlacementSide(BlockPos blockPos) {
@@ -233,6 +297,30 @@ public class FluidHandler extends Module {
             }
         }
         return null;
+    }
+
+    /** Candidate check used by automatic clearing; unlike execution it does not require local reach. */
+    public boolean isPotentialAutoTarget(BlockPos blockPos) {
+        if (!this.isTargetFluid(blockPos)) {
+            return false;
+        }
+        HudStatsManager stats = HudStatsManager.INSTANCE;
+        HudStatsManager.BlockChangeResult blockChange = stats.consumeBlockChangeResult(
+                HudStatsManager.Mode.FLUID, blockPos);
+        if (blockChange == HudStatsManager.BlockChangeResult.CONFIRMED) {
+            this.clearAttempts.confirmed(blockPos);
+        }
+        ClearTargetAttemptLedger.Decision decision = this.clearAttempts.decision(
+                blockPos,
+                blockChange == HudStatsManager.BlockChangeResult.PENDING,
+                Configs.Clear.CLEAR_MAX_RETRIES.getIntegerValue()
+        );
+        if (decision == ClearTargetAttemptLedger.Decision.EXHAUSTED
+                && !this.retryLimitFailureReported) {
+            this.retryLimitFailureReported = true;
+            HudStatsManager.INSTANCE.recordFailure(HudStatsManager.Mode.FLUID, "超过清除重试上限");
+        }
+        return decision != ClearTargetAttemptLedger.Decision.EXHAUSTED;
     }
 
     private boolean isTargetFluid(BlockPos blockPos) {

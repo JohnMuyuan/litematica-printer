@@ -2,6 +2,7 @@ package me.aleksilassila.litematica.printer.mixin.printer.mc;
 
 import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.handler.handlers.MineDebugLog;
+import me.aleksilassila.litematica.printer.handler.handlers.MineDestroyChannelPolicy;
 import me.aleksilassila.litematica.printer.handler.WorkAreaPolicy;
 import me.aleksilassila.litematica.printer.mixin_extension.BlockBreakResult;
 import me.aleksilassila.litematica.printer.mixin_extension.MultiPlayerGameModeExtension;
@@ -131,7 +132,7 @@ public abstract class MixinMultiPlayerGameMode implements MultiPlayerGameModeExt
             try {
                 playerId = player.getId();
             } catch (IllegalStateException ignored) {
-                // 26.2 登录包处理期间 LocalPlayer 可能尚未分配实体 ID。
+                // During login, LocalPlayer may not have an entity id yet.
                 return;
             }
             this.minecraft.level.destroyBlockProgress(playerId, pos, -1);
@@ -453,12 +454,16 @@ public abstract class MixinMultiPlayerGameMode implements MultiPlayerGameModeExt
 
         if (!fastPath) {
             // A single server-side player can only maintain one slow destroy
-            // progression at a time. Sending START/STOP for many slow blocks in
-            // Clear mode creates pending confirmations, not real concurrency.
-            if (this.hasDelayedDestroy) {
-                if (blockPos.equals(this.delayedDestroyPos)) {
-                    return BlockBreakResult.IN_PROGRESS;
-                }
+            // progression at a time. The reference mod routes every new slow target
+            // through the delayed channel; using vanilla destroyBlockPos here lets
+            // subsequent fast targets replace it and produces server mismatch spam.
+            MineDestroyChannelPolicy.Decision channel = MineDestroyChannelPolicy.decide(
+                    this.hasDelayedDestroy,
+                    this.hasDelayedDestroy && blockPos.equals(this.delayedDestroyPos));
+            if (channel == MineDestroyChannelPolicy.Decision.CONTINUE_ACTIVE) {
+                return BlockBreakResult.IN_PROGRESS;
+            }
+            if (channel == MineDestroyChannelPolicy.Decision.REJECT_OTHER_TARGET) {
                 return BlockBreakResult.ABORTED;
             }
             if (this.litematica_printer$hasPendingDelayedDestroy(blockPos)) {
@@ -466,7 +471,7 @@ public abstract class MixinMultiPlayerGameMode implements MultiPlayerGameModeExt
             }
 
             BlockBreakResult result = this.litematica_printer$continueDestroyBlock(
-                    false, blockPos, direction, false, allowToolSwitch);
+                    false, blockPos, direction, channel.forceDelayedDestroy(), allowToolSwitch);
             if (result == BlockBreakResult.FAILED) {
                 return result;
             }
@@ -714,7 +719,7 @@ public abstract class MixinMultiPlayerGameMode implements MultiPlayerGameModeExt
                             + " path=delayed_threshold progress=" + destroyProgress);
                     return BlockBreakResult.COMPLETED;
                 } else {
-                    // 发送STOP让服务端当前处理位置状态转移到延迟破坏位置中
+                    // STOP transfers the server-side destroy state to the delayed target.
                     NetworkUtils.sendPacket(sequence -> {
                         this.hasDelayedDestroy = true;
                         this.delayedDestroyPos = blockPos;

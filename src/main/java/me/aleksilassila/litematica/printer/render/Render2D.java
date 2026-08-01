@@ -256,7 +256,7 @@ public class Render2D {
 
     private List<HudLine> buildHudModeLines() {
         List<HudLine> lines = new ArrayList<>();
-        if (ConfigUtils.isClearMode()) {
+        if (ConfigUtils.usesClearPipeline()) {
             var clear = ClientPlayerTickManager.getClearSnapshot();
             lines.add(new HudLine("[清除] 阶段 " + humanizeClearStage(clear.stage())
                     + " | 状态 " + humanizeClearStatus(clear.status()), new Color(255, 220, 120, 255)));
@@ -313,6 +313,14 @@ public class Render2D {
             status = "无目标";
         }
 
+        if (ConfigUtils.isAutoBedrockMode()) {
+            String autoStatus = I18n.of(Modules.BEDROCK.getAutoBedrockStatusKey()).getName().getString();
+            String section = Modules.BEDROCK.getAutoBedrockSectionNumber() + "/"
+                    + Modules.BEDROCK.getAutoBedrockSectionCount();
+            lines.add(new HudLine(I18n.of("hud.autoBedrock").getName(autoStatus, section).getString(),
+                    new Color(255, 220, 120, 255)));
+        }
+
         lines.add(new HudLine("[破基岩] 进度 " + progressText
                 + " | 成功率 " + formatPercent(bedrock.successRate())
                 + " | 成功速度 " + formatRate(snapshot.ratePerSecond()) + "/s", new Color(120, 255, 170, 255)));
@@ -347,7 +355,7 @@ public class Render2D {
         if (!ConfigUtils.isEnable()) {
             return "无";
         }
-        if (ConfigUtils.isClearMode()) {
+        if (ConfigUtils.usesClearPipeline()) {
             return "清除";
         }
         List<String> names = new ArrayList<>();
@@ -374,18 +382,22 @@ public class Render2D {
             case FLUID -> "排流体";
             case MINE -> "挖掘";
             case BEDROCK -> "破基岩";
+            case AUTO_SEARCH -> "自动寻路";
             case VERIFY -> "最终验证";
             case COMPLETE -> "完成";
         };
     }
 
     private String humanizeClearStatus(me.aleksilassila.litematica.printer.handler.ModuleStageStatus status) {
+        if (status.reason() != null && status.reason().startsWith("autoBedrock.status.")) {
+            return I18n.of(status.reason()).getName().getString();
+        }
         return switch (status.state()) {
             case INACTIVE -> "未启动";
             case SCANNING -> "扫描中";
             case WORKING -> "工作中";
             case WAITING_INTERVAL -> "等待间隔";
-            case WAITING_CONFIRMATION -> "等待服务端确认";
+            case WAITING_CONFIRMATION -> "等待服务器确认";
             case BLOCKED -> "阻塞(" + status.reason() + ")";
             case SETTLED -> "已完成";
         };

@@ -10,6 +10,7 @@ import me.aleksilassila.litematica.printer.enums.*;
 import me.aleksilassila.litematica.printer.handler.scan.DirtyRegionTracker;
 import me.aleksilassila.litematica.printer.handler.scan.ScanCache;
 import me.aleksilassila.litematica.printer.handler.scan.ScanIntent;
+import me.aleksilassila.litematica.printer.handler.pathing.AutoWorkAreaScope;
 import me.aleksilassila.litematica.printer.printer.*;
 import me.aleksilassila.litematica.printer.printer.ActionManager;
 import me.aleksilassila.litematica.printer.utils.ConfigUtils;
@@ -161,7 +162,7 @@ public abstract class Module extends ConfigUtils {
         ScanCache.INSTANCE.beginTick(this.level, schematic, context.gameTime);
         this.wakeForSchematicChange(schematic);
         this.updatePlayerInteractionBox();
-        this.preprocess(); // 运行前处理的事情
+        this.preprocess(); // 杩愯鍓嶅鐞嗙殑浜嬫儏
         this.wakeForInventoryChange();
         if (!this.isConfigAllowExecute()) {
             this.stageStatus = ModuleStageStatus.INACTIVE;
@@ -736,24 +737,25 @@ public abstract class Module extends ConfigUtils {
     }
 
     private boolean isConfigAllowExecute() {
-        // 全局打印机功能未启用，直接禁止所有处理器执行
+        // 鍏ㄥ眬鎵撳嵃鏈哄姛鑳芥湭鍚敤锛岀洿鎺ョ姝㈡墍鏈夊鐞嗗櫒鎵ц
         if (!ConfigUtils.isEnable()) {
             return false;
         }
-        // 处理器绑定了模式和配置，按当前游戏模式校验
+        // 澶勭悊鍣ㄧ粦瀹氫簡妯″紡鍜岄厤缃紝鎸夊綋鍓嶆父鎴忔ā寮忔牎楠?
         if (this.printMode != null && this.enableConfig != null) {
             WorkingModeType modeType = (WorkingModeType) Configs.Core.WORK_MODE.getOptionListValue();
             return switch (modeType) {
                 case SINGLE -> Configs.Core.WORK_MODE_TYPE.getOptionListValue().equals(this.printMode)
-                        || ConfigUtils.isClearMode() && this.isClearParticipant();
+                        || this.printMode == PrintModeType.BEDROCK && ConfigUtils.isAutoBedrockMode()
+                        || ConfigUtils.usesClearPipeline() && this.isClearParticipant();
                 case MULTI -> this.enableConfig.getBooleanValue();
             };
         }
-        // 仅绑定了启用配置，直接校验配置是否启用
+        // 浠呯粦瀹氫簡鍚敤閰嶇疆锛岀洿鎺ユ牎楠岄厤缃槸鍚﹀惎鐢?
         if (this.enableConfig != null) {
             return this.enableConfig.getBooleanValue();
         }
-        // 无任何配置绑定，默认允许执行（由全局配置控制）
+        // 鏃犱换浣曢厤缃粦瀹氾紝榛樿鍏佽鎵ц锛堢敱鍏ㄥ眬閰嶇疆鎺у埗锛?
         return true;
     }
 
@@ -849,6 +851,9 @@ public abstract class Module extends ConfigUtils {
                 result.add(bounded);
             }
         }
+        if (ConfigUtils.isAutoBedrockMode() && this.isClearParticipant()) {
+            return AutoWorkAreaScope.intersect(result);
+        }
         return result;
     }
 
@@ -857,7 +862,7 @@ public abstract class Module extends ConfigUtils {
         if (WorkAreaPolicy.followsPlayer()) {
             return null;
         }
-        if (ConfigUtils.isClearMode()
+        if (ConfigUtils.usesClearPipeline()
                 && (this.printMode == PrintModeType.FLUID
                 || this.printMode == PrintModeType.MINE
                 || this.printMode == PrintModeType.BEDROCK)) {
@@ -965,18 +970,25 @@ public abstract class Module extends ConfigUtils {
     }
 
     private void updateStageStatus(boolean interrupt) {
-        String blockingReason = this.getBlockingReason();
-        if (blockingReason != null) {
-            this.stageStatus = new ModuleStageStatus(ModuleStageStatus.State.BLOCKED, blockingReason);
-        } else if (this.hasPendingConfirmation()) {
-            this.stageStatus = new ModuleStageStatus(ModuleStageStatus.State.WAITING_CONFIRMATION, "confirmation");
-        } else if (this.hasActiveOperation() || this.currentIterationDidWork || this.currentIterationFoundCandidate) {
-            this.stageStatus = new ModuleStageStatus(ModuleStageStatus.State.WORKING, "working");
-        } else if (interrupt || this.scanState != ScanState.LAZY || this.hasPendingPartialScan()) {
-            this.stageStatus = new ModuleStageStatus(ModuleStageStatus.State.SCANNING, "scanning");
-        } else {
-            this.stageStatus = new ModuleStageStatus(ModuleStageStatus.State.SETTLED, "settled");
-        }
+        this.stageStatus = ModuleStageStatusResolver.resolve(
+                this.getBlockingReason(),
+                this.hasPendingConfirmation(),
+                this.hasActiveOperation() || this.currentIterationDidWork || this.currentIterationFoundCandidate,
+                interrupt,
+                this.scanState,
+                this.hasPendingPartialScan(),
+                this.usesFinitePassSettlement()
+        );
+    }
+
+    /**
+     * Clear stages are finite passes. Once their current scan has been exhausted without finding
+     * work, the controller must be allowed to advance even when lazy scanning is disabled.
+     * Otherwise {@code lazyEnterTicks = 0} leaves FLUID permanently in SCANNING and automatic
+     * pathfinding never receives control.
+     */
+    private boolean usesFinitePassSettlement() {
+        return ConfigUtils.usesClearPipeline() && this.isClearParticipant();
     }
 
     public int getPendingIterationWorkCount() {

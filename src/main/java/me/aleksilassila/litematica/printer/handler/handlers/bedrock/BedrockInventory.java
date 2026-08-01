@@ -209,7 +209,9 @@ public final class BedrockInventory {
     private static boolean canInstantMinePiston(LocalPlayer player) {
         Inventory inventory = player.getInventory();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-            if (getBlockBreakingSpeed(player, Blocks.PISTON.defaultBlockState(), inventory.getItem(slot)) > 20.0F) {
+            ItemStack stack = inventory.getItem(slot);
+            if (InteractionUtils.isToolAllowedByDurabilityProtection(stack)
+                    && getBlockBreakingSpeed(player, Blocks.PISTON.defaultBlockState(), stack) > 20.0F) {
                 return true;
             }
         }

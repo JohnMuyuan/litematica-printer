@@ -102,7 +102,14 @@ public class InteractionUtils {
     }
 
     public static boolean isToolAllowedByDurabilityProtection(ItemStack stack) {
-        return !TweakerooUtils.isToolTooDamagedForBreaking(stack);
+        if (TweakerooUtils.isToolTooDamagedForBreaking(stack)) {
+            return false;
+        }
+        if (!ConfigUtils.isAutoBedrockMode() || stack == null || stack.isEmpty() || !stack.isDamageableItem()) {
+            return true;
+        }
+        int remainingDurability = stack.getMaxDamage() - stack.getDamageValue();
+        return remainingDurability >= Configs.AutoClear.MIN_TOOL_DURABILITY.getIntegerValue();
     }
 
     public static int getCurrentToolSafeBreakBudget() {

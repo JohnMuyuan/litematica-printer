@@ -95,6 +95,54 @@ public final class BedrockController {
         return !TARGETS.isEmpty() || !CLEANUP_QUEUE.isEmpty();
     }
 
+    public static boolean hasPendingPathingRecovery() {
+        for (BedrockTarget target : TARGETS) {
+            if (target != null && target.needsInitializationReposition()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static PathingRecovery consumePathingRecovery() {
+        Iterator<BedrockTarget> iterator = TARGETS.iterator();
+        while (iterator.hasNext()) {
+            BedrockTarget target = iterator.next();
+            if (target == null) {
+                iterator.remove();
+                continue;
+            }
+            int attempt = target.beginInitializationReposition();
+            if (attempt < 0) {
+                continue;
+            }
+            if (attempt == 0) {
+                cleanupTarget(iterator, target, null);
+                return null;
+            }
+            BlockPos targetPos = target.getBedrockPos().immutable();
+            BlockPos origin = CLIENT.player == null
+                    ? targetPos : CLIENT.player.blockPosition().immutable();
+            lastHudReason = "repositioning";
+            Reference.LOGGER.info("[Bedrock] initialization reposition requested: target={} attempt={} origin={}",
+                    targetPos.toShortString(), attempt, origin.toShortString());
+            return new PathingRecovery(targetPos, attempt, origin);
+        }
+        return null;
+    }
+
+    public static void finishPathingRecovery(BlockPos targetPos) {
+        if (targetPos == null) {
+            return;
+        }
+        for (BedrockTarget target : TARGETS) {
+            if (target != null && targetPos.equals(target.getBedrockPos())) {
+                target.finishInitializationReposition();
+                return;
+            }
+        }
+    }
+
     public static void setActiveTargetPredicate(Predicate<BlockPos> predicate) {
         activeTargetPredicate = predicate == null ? pos -> true : predicate;
     }
@@ -119,10 +167,6 @@ public final class BedrockController {
         purgeTargetsOutsideSelection();
         processCleanupQueue();
         cleanupPressureThisTick = sampleCleanupPressure(level);
-
-        if (BedrockInventory.warningMessage() != null) {
-            return;
-        }
 
         int executeBudget = getExecuteBudget();
         int initialExecuteBudget = executeBudget;
@@ -1151,6 +1195,9 @@ public final class BedrockController {
             BlockPos slimePos,
             long plannedAtTick
     ) {
+    }
+
+    public record PathingRecovery(BlockPos target, int attempt, BlockPos origin) {
     }
 
     public static HudSnapshot getHudSnapshot() {

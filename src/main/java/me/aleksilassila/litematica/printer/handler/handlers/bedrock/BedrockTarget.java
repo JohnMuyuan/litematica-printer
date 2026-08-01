@@ -52,6 +52,8 @@ public class BedrockTarget {
     private int initializeTick = -1;
     private int lastPostExecuteResidueCleanupTick = -1;
     private int lastPollutedMachineCleanupTick = -1;
+    private int initializationStallTicks;
+    private int initializationRepositionAttempts;
     private boolean throughputConsumedThisTick;
     private Status status = Status.UNINITIALIZED;
     private String failureReason = "none";
@@ -130,7 +132,33 @@ public class BedrockTarget {
                 + " head=" + level.getBlockState(headPos)
                 + " torch=" + (getTorchPos() == null ? "none" : level.getBlockState(getTorchPos()))
                 + " ticks=" + tickTimes
-                + " tried=" + hasTried;
+                + " tried=" + hasTried
+                + " initializationStall=" + initializationStallTicks
+                + " repositions=" + initializationRepositionAttempts;
+    }
+
+    boolean needsInitializationReposition() {
+        return this.status == Status.UNINITIALIZED
+                && InitializationRecoveryPolicy.needsReposition(this.initializationStallTicks);
+    }
+
+    int beginInitializationReposition() {
+        int attempt = InitializationRecoveryPolicy.nextAttempt(
+                this.initializationStallTicks, this.initializationRepositionAttempts);
+        if (attempt < 0) {
+            return -1;
+        }
+        this.initializationStallTicks = 0;
+        if (attempt == 0) {
+            fail("initialization_reposition_exhausted");
+            return 0;
+        }
+        this.initializationRepositionAttempts = attempt;
+        return attempt;
+    }
+
+    void finishInitializationReposition() {
+        this.initializationStallTicks = 0;
     }
 
     public boolean isHorizontalLayout() {
@@ -155,14 +183,28 @@ public class BedrockTarget {
         }
 
         updateStatus();
+        if (this.status != Status.UNINITIALIZED) {
+            this.initializationStallTicks = 0;
+            this.initializationRepositionAttempts = 0;
+        }
         switch (this.status) {
             case UNINITIALIZED -> {
                 if (!allowInitialize) {
                     break;
                 }
-                if (!canBuildInitialMachine()) {
+                // Do not spend the normal 20-tick initialization grace period when
+                // the player is physically standing in the piston/head footprint.
+                // Mark recovery due immediately so AutoBedrock moves the player aside
+                // on the next coordinator tick.
+                if (isPlayerBlockingMachine()) {
+                    this.initializationStallTicks = InitializationRecoveryPolicy.REPOSITION_TICKS;
                     break;
                 }
+                if (!canBuildInitialMachine()) {
+                    this.initializationStallTicks = 0;
+                    break;
+                }
+                this.initializationStallTicks++;
                 if (!BedrockPlacer.placePiston(this.pistonPos, this.layout.getPrimingFacing())) {
                     break;
                 }
@@ -664,6 +706,18 @@ public class BedrockTarget {
         }
         fail("piston_placement_rejected");
         BedrockMessages.actionBar("bedrockminer.fail.place.piston");
+    }
+
+    private boolean isPlayerBlockingMachine() {
+        if (Minecraft.getInstance().player == null) {
+            return false;
+        }
+        BlockPos feet = Minecraft.getInstance().player.blockPosition();
+        BlockPos playerHead = feet.above();
+        return feet.equals(this.pistonPos)
+                || feet.equals(this.headPos)
+                || playerHead.equals(this.pistonPos)
+                || playerHead.equals(this.headPos);
     }
 
     private void fail(String reason) {

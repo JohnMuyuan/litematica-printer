@@ -106,6 +106,7 @@ public class ConfigUi extends GuiConfigsBase {
         EXCAVATE(I18n.of("category.mine")),
         MAGNET(I18n.of("category.magnet")),
         CLEAR(I18n.of("category.clear")),
+        AUTO_CLEAR(I18n.of("category.autoClear")),
         BEDROCK(I18n.of("category.bedrock")),
         FILL(I18n.of("category.fill")),
         FLUID(I18n.of("category.fluid"));
@@ -132,7 +133,7 @@ public class ConfigUi extends GuiConfigsBase {
 
         private boolean requiresServer() {
             return switch (this) {
-                case PRINT, EXCAVATE, MAGNET, CLEAR, BEDROCK, FILL, FLUID -> true;
+                case PRINT, EXCAVATE, MAGNET, CLEAR, AUTO_CLEAR, BEDROCK, FILL, FLUID -> true;
                 default -> false;
             };
         }
@@ -148,6 +149,7 @@ public class ConfigUi extends GuiConfigsBase {
                 case EXCAVATE -> Configs.Mine.OPTIONS;
                 case MAGNET -> Configs.Magnet.OPTIONS;
                 case CLEAR -> Configs.Clear.OPTIONS;
+                case AUTO_CLEAR -> Configs.AutoClear.OPTIONS;
                 case BEDROCK -> Configs.Bedrock.OPTIONS;
                 case FILL -> Configs.Fill.OPTIONS;
                 case FLUID -> Configs.Fluid.OPTIONS;

@@ -8,6 +8,8 @@ import me.aleksilassila.litematica.printer.handler.handlers.BedrockHandler;
 import me.aleksilassila.litematica.printer.handler.handlers.FluidHandler;
 import me.aleksilassila.litematica.printer.handler.handlers.MineHandler;
 import me.aleksilassila.litematica.printer.handler.handlers.bedrock.BedrockController;
+import me.aleksilassila.litematica.printer.handler.pathing.AutoBedrockCoordinator;
+import me.aleksilassila.litematica.printer.utils.ConfigUtils;
 
 public final class ClearController {
     private final FluidHandler fluid;
@@ -37,10 +39,42 @@ public final class ClearController {
         boolean fluidEnabled = Configs.Clear.CLEAR_FLUID_ENABLED.getBooleanValue();
         boolean mineEnabled = Configs.Clear.CLEAR_MINE_ENABLED.getBooleanValue();
         boolean bedrockEnabled = Configs.Clear.CLEAR_BEDROCK_ENABLED.getBooleanValue();
+        boolean autoMode = ConfigUtils.isAutoBedrockMode();
+
+        // A completed bedrock machine can expose fluid or ordinary blocks. Re-check the
+        // higher-priority phases before the coordinator is allowed to move toward another
+        // bedrock cluster. This keeps FLUID -> MINE -> BEDROCK ordering strict in auto mode.
+        if (autoMode && this.stage == Stage.BEDROCK && !BedrockController.hasActiveWork()
+                && this.preemptBedrockForHigherPriority(context, fluidEnabled, mineEnabled)) {
+            return;
+        }
+
+        if (autoMode) {
+            AutoBedrockCoordinator.TickResult pathing = this.bedrock.tickAutoClear(
+                    context, this.fluid, this.mine, this.stage == Stage.COMPLETE,
+                    this.stage == Stage.BEDROCK);
+            if (pathing.restartLocalClear()) {
+                this.enterFluid(FluidPass.INITIAL, true);
+            }
+            if (pathing.complete()) {
+                this.stage = Stage.COMPLETE;
+                this.snapshot = new Snapshot(Stage.COMPLETE,
+                        new ModuleStageStatus(ModuleStageStatus.State.SETTLED, "complete"));
+                return;
+            }
+            Stage displayStage = AutoClearDisplayPolicy.displayStage(this.stage, false);
+            if (displayStage == Stage.AUTO_SEARCH) {
+                this.snapshot = new Snapshot(Stage.AUTO_SEARCH,
+                        new ModuleStageStatus(ModuleStageStatus.State.SCANNING, pathing.statusKey()));
+            }
+            if (pathing.blocksLocalWork()) {
+                return;
+            }
+        }
 
         // COMPLETE remains visible for one tick. Afterwards the normal lazy/dirty
         // scan starts again from fluids, preserving the same strict priority.
-        if (this.stage == Stage.COMPLETE) {
+        if (this.stage == Stage.COMPLETE && !ConfigUtils.isAutoBedrockMode()) {
             if (fluidEnabled) {
                 this.enterFluid(FluidPass.INITIAL, false);
             } else if (mineEnabled) {
@@ -108,30 +142,9 @@ public final class ClearController {
                         continue;
                     }
 
-                    if (!BedrockController.hasActiveWork()) {
-                        if (fluidEnabled) {
-                            this.fluid.tick(context);
-                            ModuleStageStatus fluidStatus = this.fluid.getStageStatus();
-                            if (fluidStatus.blocksLowerPriority()) {
-                                this.stage = Stage.FLUID;
-                                this.fluidPass = FluidPass.POST_MINE_VERIFY;
-                                this.stageDidWork = false;
-                                this.observeStageWork(fluidStatus);
-                                this.snapshot = new Snapshot(Stage.FLUID, fluidStatus);
-                                return;
-                            }
-                        }
-                        if (mineEnabled) {
-                            this.mine.tick(context);
-                            ModuleStageStatus mineStatus = this.mine.getStageStatus();
-                            if (mineStatus.blocksLowerPriority()) {
-                                this.stage = Stage.MINE;
-                                this.stageDidWork = false;
-                                this.observeStageWork(mineStatus);
-                                this.snapshot = new Snapshot(Stage.MINE, mineStatus);
-                                return;
-                            }
-                        }
+                    if (!BedrockController.hasActiveWork() && !autoMode
+                            && this.preemptBedrockForHigherPriority(context, fluidEnabled, mineEnabled)) {
+                        return;
                     }
                     this.bedrock.tick(context);
                     ModuleStageStatus status = this.bedrock.getStageStatus();
@@ -145,7 +158,10 @@ public final class ClearController {
                 case VERIFY -> {
                     this.stage = Stage.COMPLETE;
                     this.stageDidWork = false;
-                    this.snapshot = new Snapshot(Stage.COMPLETE,
+                    this.snapshot = ConfigUtils.isAutoBedrockMode()
+                            ? new Snapshot(AutoClearDisplayPolicy.displayStage(Stage.VERIFY, false),
+                            new ModuleStageStatus(ModuleStageStatus.State.SCANNING, this.bedrock.getAutoBedrockStatusKey()))
+                            : new Snapshot(Stage.COMPLETE,
                             new ModuleStageStatus(ModuleStageStatus.State.SETTLED, "complete"));
                     return;
                 }
@@ -154,6 +170,34 @@ public final class ClearController {
                 }
             }
         }
+    }
+
+    private boolean preemptBedrockForHigherPriority(TickContext context,
+                                                       boolean fluidEnabled, boolean mineEnabled) {
+        if (fluidEnabled) {
+            this.fluid.tick(context);
+            ModuleStageStatus fluidStatus = this.fluid.getStageStatus();
+            if (fluidStatus.blocksLowerPriority()) {
+                this.stage = Stage.FLUID;
+                this.fluidPass = FluidPass.POST_MINE_VERIFY;
+                this.stageDidWork = false;
+                this.observeStageWork(fluidStatus);
+                this.snapshot = new Snapshot(Stage.FLUID, fluidStatus);
+                return true;
+            }
+        }
+        if (mineEnabled) {
+            this.mine.tick(context);
+            ModuleStageStatus mineStatus = this.mine.getStageStatus();
+            if (mineStatus.blocksLowerPriority()) {
+                this.stage = Stage.MINE;
+                this.stageDidWork = false;
+                this.observeStageWork(mineStatus);
+                this.snapshot = new Snapshot(Stage.MINE, mineStatus);
+                return true;
+            }
+        }
+        return false;
     }
 
     private void enterFluid(FluidPass pass, boolean requestVerificationScan) {
@@ -214,6 +258,7 @@ public final class ClearController {
         FLUID,
         MINE,
         BEDROCK,
+        AUTO_SEARCH,
         VERIFY,
         COMPLETE
     }

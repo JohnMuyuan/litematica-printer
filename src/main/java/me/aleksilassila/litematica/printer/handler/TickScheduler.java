@@ -1,6 +1,7 @@
 package me.aleksilassila.litematica.printer.handler;
 
 import com.google.common.collect.ImmutableList;
+import me.aleksilassila.litematica.printer.Reference;
 import me.aleksilassila.litematica.printer.config.Configs;
 import me.aleksilassila.litematica.printer.handler.clear.ClearController;
 import me.aleksilassila.litematica.printer.handler.handlers.GuiHandler;
@@ -30,6 +31,10 @@ final class TickScheduler {
     private int pendingScopeHash = Integer.MIN_VALUE;
     private int scopeDrainTicks;
     private int roundRobinOffset;
+    private final AutomationPauseWatchdog pauseWatchdog = new AutomationPauseWatchdog();
+
+    private static final int MAX_INVENTORY_PAUSE_TICKS = 100;
+    private static final int MAX_LOOK_QUEUE_PAUSE_TICKS = 20;
 
     TickScheduler(ImmutableList<Module> modules) {
         this.modules = modules;
@@ -54,6 +59,7 @@ final class TickScheduler {
         } else if (this.executionScopeHash != currentScopeHash) {
             ActionManager.INSTANCE.clearQueue();
             ScanCache.INSTANCE.clear();
+            HudStatsManager.INSTANCE.resetAll();
             for (Module module : this.modules) {
                 module.resetRuntimeState();
             }
@@ -81,7 +87,7 @@ final class TickScheduler {
                 handler.tick(context);
             }
         }
-        if (ConfigUtils.isClearMode()) {
+        if (ConfigUtils.usesClearPipeline()) {
             this.clearController.tick(context);
             return;
         }
@@ -134,6 +140,7 @@ final class TickScheduler {
         this.pendingScopeHash = Integer.MIN_VALUE;
         this.scopeDrainTicks = 0;
         this.roundRobinOffset = 0;
+        this.pauseWatchdog.reset();
         this.clearController.reset();
     }
 
@@ -147,16 +154,17 @@ final class TickScheduler {
 
     private void pause(String reason) {
         if (!reason.equals(this.lastPauseReason)) {
-            MineDebugLog.write("scheduler pause reason=" + reason + " packetTick=" + this.packetTick);
+            Reference.LOGGER.info("[AutoClear] scheduler paused: reason={} packetTick={}", reason, this.packetTick);
             this.lastPauseReason = reason;
         }
     }
 
     private void resume() {
         if (this.lastPauseReason != null) {
-            MineDebugLog.write("scheduler resume after=" + this.lastPauseReason + " packetTick=" + this.packetTick);
+            Reference.LOGGER.info("[AutoClear] scheduler resumed: previousReason={} packetTick={}", this.lastPauseReason, this.packetTick);
             this.lastPauseReason = null;
         }
+        this.pauseWatchdog.reset();
     }
 
     private boolean pauseForInventoryState(String reasonPrefix) {
@@ -167,7 +175,19 @@ final class TickScheduler {
         boolean openHandler = isOpenHandler;
         if (pendingSwitch || switchingItem || takeItOutPending || inventorySwitchPending) {
             ActionManager.INSTANCE.clearQueue();
-            this.pause(reasonPrefix + " openHandler=" + openHandler + " pendingSwitch=" + pendingSwitch + " switchingItem=" + switchingItem + " takeItOutPending=" + takeItOutPending + " inventorySwitchPending=" + inventorySwitchPending);
+            String detail = reasonPrefix + " openHandler=" + openHandler + " pendingSwitch=" + pendingSwitch
+                    + " switchingItem=" + switchingItem + " takeItOutPending=" + takeItOutPending
+                    + " inventorySwitchPending=" + inventorySwitchPending;
+            this.pause(detail);
+            if (this.pauseWatchdog.shouldRecover("inventory", MAX_INVENTORY_PAUSE_TICKS)) {
+                Reference.LOGGER.warn("[AutoClear] scheduler recovered stale inventory pause: ticks={} detail={}",
+                        this.pauseWatchdog.ticks(), detail);
+                InventorySwitchGuard.reset();
+                TakeItOutUtils.resetPending();
+                me.aleksilassila.litematica.printer.printer.zxy.inventory.InventoryUtils.resetRuntime();
+                this.resume();
+                return false;
+            }
             return true;
         }
         return false;
@@ -178,6 +198,13 @@ final class TickScheduler {
             return false;
         }
         this.pause("send_queue_wait_modify_look");
+        if (this.pauseWatchdog.shouldRecover("look_queue", MAX_LOOK_QUEUE_PAUSE_TICKS)) {
+            Reference.LOGGER.warn("[AutoClear] scheduler discarded stale look queue: ticks={}",
+                    this.pauseWatchdog.ticks());
+            ActionManager.INSTANCE.clearQueue();
+            this.resume();
+            return false;
+        }
         return true;
     }
 
@@ -219,6 +246,9 @@ final class TickScheduler {
         result = 31 * result + Boolean.hashCode(Configs.Clear.CLEAR_FLUID_ENABLED.getBooleanValue());
         result = 31 * result + Boolean.hashCode(Configs.Clear.CLEAR_MINE_ENABLED.getBooleanValue());
         result = 31 * result + Boolean.hashCode(Configs.Clear.CLEAR_BEDROCK_ENABLED.getBooleanValue());
+        if (ConfigUtils.isAutoBedrockMode()) {
+            result = 31 * result + Configs.Clear.CLEAR_MAX_RETRIES.getIntegerValue();
+        }
         result = 31 * result + Configs.Clear.CLEAR_SELECTION_TYPE.getOptionListValue().hashCode();
         return result;
     }

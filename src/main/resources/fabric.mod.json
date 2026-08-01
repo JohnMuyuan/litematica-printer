@@ -38,7 +38,8 @@
     "fabric-api": ">=${fabric_api_version}"
   },
   "suggests": {
-    "quickshulker": "*"
+    "quickshulker": "*",
+    "baritone": "*"
   },
   "custom": {
     "modmenu": {

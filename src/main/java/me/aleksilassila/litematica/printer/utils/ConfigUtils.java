@@ -40,12 +40,17 @@ public class ConfigUtils {
                 && Configs.Core.WORK_MODE_TYPE.getOptionListValue() == PrintModeType.CLEAR;
     }
 
+    /** Uses the strict FLUID -> MINE -> BEDROCK clear pipeline. */
+    public static boolean usesClearPipeline() {
+        return isClearMode() || isAutoBedrockMode();
+    }
+
     public static boolean isMineMode() {
         if (isMultiMode()) {
             return Configs.Core.MINE.getBooleanValue();
         }
         return Configs.Core.WORK_MODE_TYPE.getOptionListValue() == PrintModeType.MINE
-                || isClearMode();
+                || usesClearPipeline();
     }
 
     public static boolean isFillMode() {
@@ -60,14 +65,20 @@ public class ConfigUtils {
             return Configs.Core.FLUID.getBooleanValue();
         }
         return Configs.Core.WORK_MODE_TYPE.getOptionListValue() == PrintModeType.FLUID
-                || isClearMode();
+                || usesClearPipeline();
     }
 
     public static boolean isBedrockMode() {
         if (isMultiMode()) {
             return Configs.Hotkeys.BEDROCK.getBooleanValue();
         }
-        return Configs.Core.WORK_MODE_TYPE.getOptionListValue() == PrintModeType.BEDROCK;
+        PrintModeType mode = (PrintModeType) Configs.Core.WORK_MODE_TYPE.getOptionListValue();
+        return mode == PrintModeType.BEDROCK || mode == PrintModeType.AUTO_BEDROCK;
+    }
+
+    public static boolean isAutoBedrockMode() {
+        return isSingleMode()
+                && Configs.Core.WORK_MODE_TYPE.getOptionListValue() == PrintModeType.AUTO_BEDROCK;
     }
 
     public static PrintModeType getPrintModeType() {

@@ -36,6 +36,8 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
     private static final BooleanSupplier isSingle = () -> Core.WORK_MODE.getOptionListValue().equals(WorkingModeType.SINGLE);
     private static final BooleanSupplier isMulti = () -> Core.WORK_MODE.getOptionListValue().equals(WorkingModeType.MULTI);
     private static final BooleanSupplier isFixedWorkArea = () -> Core.WORK_AREA_SOURCE.getOptionListValue().equals(WorkAreaSourceType.FIXED_LITEMATICA);
+    private static final BooleanSupplier isAutoBedrockMode = () -> isSingle.getAsBoolean()
+            && Core.WORK_MODE_TYPE.getOptionListValue().equals(PrintModeType.AUTO_BEDROCK);
 
     private static final BooleanSupplier isBreakCustom = () -> Break.BREAK_LIMITER.getOptionListValue().equals(ExcavateListMode.CUSTOM);
     private static final BooleanSupplier isBreakWhitelist = () -> isBreakCustom.getAsBoolean() && Break.BREAK_LIMIT.getOptionListValue().equals(UsageRestriction.ListType.WHITELIST);
@@ -69,7 +71,8 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
         optionSet.addAll(Clear.OPTIONS);          // 娓呴�?
         optionSet.addAll(Fill.OPTIONS);           // 濉�?
         optionSet.addAll(Fluid.OPTIONS);          // 鎺掓祦浣?
-        optionSet.addAll(Bedrock.OPTIONS);        // 鐮村熀宀?
+        optionSet.addAll(Bedrock.OPTIONS);
+        optionSet.addAll(AutoClear.OPTIONS);        // 鐮村熀宀?
         OPTIONS = ImmutableList.copyOf(optionSet);
 
         List<IHotkey> hotkeys = new ArrayList<>();
@@ -419,6 +422,70 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
         );
     }
 
+    public static class AutoClear {
+        public static final ConfigBoolean AUTO_EAT = bool("autoEat")
+                .defaultValue(true)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ConfigInteger MIN_TOOL_DURABILITY = integer("minToolDurability")
+                .defaultValue(64)
+                .range(1, 1000)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ConfigInteger AUTO_SECTION_SHORT_SIZE = integer("autoSectionShortSize")
+                .defaultValue(6)
+                .range(1, 64)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ConfigInteger AUTO_SECTION_LONG_SIZE = integer("autoSectionLongSize")
+                .defaultValue(16)
+                .range(1, 128)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ConfigBoolean PATHING_ALLOW_BREAK = bool("pathingAllowBreak")
+                .defaultValue(true)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ConfigBoolean PATHING_ALLOW_PLACE = bool("pathingAllowPlace")
+                .defaultValue(true)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ConfigBoolean PATHING_ALLOW_SPRINT = bool("pathingAllowSprint")
+                .defaultValue(true)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ConfigInteger MIN_BEDROCK_BATCH_SIZE = integer("minBedrockBatchSize")
+                .defaultValue(3)
+                .range(1, 64)
+                .build();
+
+        public static final ConfigInteger MAX_LOCAL_BEDROCK_DISTANCE = integer("maxLocalBedrockDistance")
+                .defaultValue(1)
+                .range(1, 6)
+                .setVisible(isAutoBedrockMode)
+                .build();
+
+        public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
+                AUTO_EAT,
+                MIN_TOOL_DURABILITY,
+                AUTO_SECTION_SHORT_SIZE,
+                AUTO_SECTION_LONG_SIZE,
+                PATHING_ALLOW_BREAK,
+                PATHING_ALLOW_PLACE,
+                PATHING_ALLOW_SPRINT,
+                MIN_BEDROCK_BATCH_SIZE,
+                MAX_LOCAL_BEDROCK_DISTANCE
+        );
+
+    }
+
     public static class Print {
         // 閫夊尯绫诲�?
         public static final ConfigOptionList PRINT_SELECTION_TYPE = optionList("printSelectionType")
@@ -659,6 +726,10 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
                 .defaultValue(true)
                 .build();
 
+        public static final ConfigStringList CLEAR_MINE_BLACKLIST = stringList("clearMineBlacklist")
+                .defaultValue(ImmutableList.of())
+                .build();
+
         public static final ConfigBoolean CLEAR_BEDROCK_ENABLED = bool("clearBedrockEnabled")
                 .defaultValue(true)
                 .build();
@@ -675,6 +746,7 @@ public class Configs extends ConfigBuilders implements IConfigHandler {
         public static final ImmutableList<IConfigBase> OPTIONS = ImmutableList.of(
                 CLEAR_FLUID_ENABLED,
                 CLEAR_MINE_ENABLED,
+                CLEAR_MINE_BLACKLIST,
                 CLEAR_BEDROCK_ENABLED,
                 CLEAR_MAX_RETRIES,
                 CLEAR_SELECTION_TYPE

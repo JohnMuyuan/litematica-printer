@@ -6,6 +6,7 @@ import me.aleksilassila.litematica.printer.handler.drop.MiningDropCollector;
 import me.aleksilassila.litematica.printer.handler.scan.ScanCache;
 import me.aleksilassila.litematica.printer.handler.handlers.*;
 import me.aleksilassila.litematica.printer.handler.handlers.bedrock.BedrockController;
+import me.aleksilassila.litematica.printer.handler.pathing.AutoEater;
 import me.aleksilassila.litematica.printer.mixin_extension.MultiPlayerGameModeExtension;
 import me.aleksilassila.litematica.printer.network.RemoteWorkPacket;
 import me.aleksilassila.litematica.printer.printer.ActionManager;
@@ -34,7 +35,10 @@ public class ClientPlayerTickManager {
 
     public static void tick() {
         try {
-            SCHEDULER.tick();
+            AutoEater.INSTANCE.tick();
+            if (!AutoEater.INSTANCE.blocksAutomation()) {
+                SCHEDULER.tick();
+            }
             MiningDropCollector.INSTANCE.tick();
         } finally {
             RemoteWorkPacket.flush();
@@ -70,6 +74,7 @@ public class ClientPlayerTickManager {
     }
 
     public static void resetRuntime(String reason) {
+        AutoEater.INSTANCE.reset();
         BedrockController.reset();
         ActionManager.INSTANCE.clearQueue();
         if (mc.gameMode instanceof MultiPlayerGameModeExtension extension) {

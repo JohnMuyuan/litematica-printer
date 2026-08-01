@@ -115,11 +115,24 @@ public final class HudStatsManager {
     }
 
     public void trackExpectedBlockChange(Mode mode, BlockPos pos, BlockState originalState) {
+        this.trackExpectedBlockChange(mode, pos, originalState, null);
+    }
+
+    public void trackExpectedBlockChange(
+            Mode mode,
+            BlockPos pos,
+            BlockState originalState,
+            Runnable onConfirmed
+    ) {
         if (pos == null || originalState == null) {
             return;
         }
         long now = ClientPlayerTickManager.getCurrentHandlerTime();
-        PendingStateChange pending = new PendingStateChange(originalState, now + OTHER_CONFIRM_TIMEOUT_TICKS);
+        PendingStateChange pending = new PendingStateChange(
+                originalState,
+                now + OTHER_CONFIRM_TIMEOUT_TICKS,
+                onConfirmed
+        );
         if (mode == Mode.FILL) {
             this.pendingFillTargets.put(pos.immutable(), pending);
         } else if (mode == Mode.FLUID) {
@@ -171,6 +184,46 @@ public final class HudStatsManager {
         };
     }
 
+    public boolean isBlockChangePending(Mode mode, BlockPos pos) {
+        if (pos == null) {
+            return false;
+        }
+        return switch (mode) {
+            case FILL -> this.pendingFillTargets.containsKey(pos);
+            case FLUID -> this.pendingFluidTargets.containsKey(pos);
+            default -> false;
+        };
+    }
+
+    public BlockChangeResult consumeBlockChangeResult(Mode mode, BlockPos pos) {
+        if (pos == null) {
+            return BlockChangeResult.NONE;
+        }
+        Map<BlockPos, PendingStateChange> pendingTargets = switch (mode) {
+            case FILL -> this.pendingFillTargets;
+            case FLUID -> this.pendingFluidTargets;
+            default -> null;
+        };
+        if (pendingTargets == null) {
+            return BlockChangeResult.NONE;
+        }
+        PendingStateChange pending = pendingTargets.get(pos);
+        if (pending == null) {
+            return BlockChangeResult.NONE;
+        }
+        Minecraft client = Minecraft.getInstance();
+        if (client.level != null && !client.level.getBlockState(pos).equals(pending.originalState())) {
+            pendingTargets.remove(pos);
+            this.confirmPendingStateChange(ClientPlayerTickManager.getCurrentHandlerTime(), mode, pending);
+            return BlockChangeResult.CONFIRMED;
+        }
+        if (ClientPlayerTickManager.getCurrentHandlerTime() <= pending.expireTick()) {
+            return BlockChangeResult.PENDING;
+        }
+        pendingTargets.remove(pos);
+        return BlockChangeResult.EXPIRED;
+    }
+
     public boolean isPrintConfirmationWindowFull() {
         return this.pendingPrintStates.size() >= Configs.Placement.PLACE_CONFIRM_WINDOW.getIntegerValue();
     }
@@ -200,7 +253,7 @@ public final class HudStatsManager {
         PendingStateChange pending = pendingTargets.get(pos);
         if (pending != null && !currentState.equals(pending.originalState())) {
             pendingTargets.remove(pos);
-            this.stats.get(mode).recordConfirmedUnit(now, 1);
+            this.confirmPendingStateChange(now, mode, pending);
         }
     }
 
@@ -288,11 +341,25 @@ public final class HudStatsManager {
                 continue;
             }
             if (!client.level.getBlockState(pos).equals(pending.originalState())) {
-                this.stats.get(mode).recordConfirmedUnit(now, 1);
+                this.confirmPendingStateChange(now, mode, pending);
             } else {
                 pendingTargets.put(pos, pending);
             }
         }
+    }
+
+    private void confirmPendingStateChange(long now, Mode mode, PendingStateChange pending) {
+        this.stats.get(mode).recordConfirmedUnit(now, 1);
+        if (pending.onConfirmed() != null) {
+            pending.onConfirmed().run();
+        }
+    }
+
+    public enum BlockChangeResult {
+        NONE,
+        PENDING,
+        CONFIRMED,
+        EXPIRED
     }
 
     public enum Mode {
@@ -406,7 +473,7 @@ public final class HudStatsManager {
     private record PendingBlockState(BlockState expectedState, long sentTick, long expireTick) {
     }
 
-    private record PendingStateChange(BlockState originalState, long expireTick) {
+    private record PendingStateChange(BlockState originalState, long expireTick, Runnable onConfirmed) {
     }
 
     private static final class RollingCounter {

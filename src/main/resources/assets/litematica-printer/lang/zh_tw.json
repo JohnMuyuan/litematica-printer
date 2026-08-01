@@ -101,6 +101,8 @@
     "litematica-printer.config.clearFluidEnabled.desc":  "在清除模式中運行排流體；關閉後可不受流體填充材料限制地繼續挖掘。",
     "litematica-printer.config.clearMineEnabled":  "清除：普通挖掘",
     "litematica-printer.config.clearMineEnabled.desc":  "在清除模式中運行普通挖掘，沿用挖掘與共享破壞引擎設定。",
+    "litematica-printer.config.clearMineBlacklist":  "清除挖掘黑名單",
+    "litematica-printer.config.clearMineBlacklist.desc":  "全自動清除時需要保留、不應挖掘的方塊。普通挖掘模式的白名單和黑名單不會影響全自動清除。",
     "litematica-printer.config.clearBedrockEnabled":  "清除：破基岩目標",
     "litematica-printer.config.clearBedrockEnabled.desc":  "排除流體與普通挖掘穩定後，使用內部並行破基岩控制器處理剩餘目標。",
     "litematica-printer.config.clearMaxRetries":  "清除目標重試上限",
@@ -285,5 +287,13 @@
     "bedrockminer.fail.missing.slime":  "破基岩失敗：背包中缺少史萊姆方塊",
     "bedrockminer.fail.missing.instantmine":  "破基岩失敗：需要可瞬間挖掘活塞的鎬與狀態",
     "bedrockminer.fail.place.redstonetorch":  "破基岩失敗：找不到可用的紅石火把支撐位置",
-    "bedrockminer.fail.place.piston":  "破基岩失敗：無法放置或恢復活塞結構"
+    "bedrockminer.fail.place.piston":  "破基岩失敗：無法放置或恢復活塞結構",
+    "litematica-printer.config.category.autoClear": "§6全自動清除尋路",
+    "litematica-printer.config.category.autoClear.desc": "全自動清除的自動尋路、分區掃描與除錯設定",
+    "litematica-printer.config.minBedrockBatchSize": "最少批量基岩數量",
+    "litematica-printer.config.minBedrockBatchSize.desc": "目前分區最佳基岩聚集少於此值時，優先搜尋其他更密集的分區；密集掃描結束後仍會回來清理零散基岩。設為 1 可關閉密集區優先。",
+    "litematica-printer.config.maxLocalBedrockDistance": "本地基岩最大距離",
+    "litematica-printer.config.maxLocalBedrockDistance.desc": "只有玩家腳部方塊與基岩在三個座標軸上的距離都不超過此值時，才允許原地啟動基岩機器；預設 1，超過後會讓 Baritone 先靠近。",
+    "litematica-printer.autoBedrock.status.searchingDenseBedrock": "目前基岩過於零散，正在搜尋更密集的分區",
+    "litematica-printer.autoBedrock.status.sparseCleanup": "已無密集基岩，開始回收清理零散基岩"
 }
