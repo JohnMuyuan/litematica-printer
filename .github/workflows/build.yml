@@ -78,8 +78,19 @@ jobs:
       - name: Capture server companion jar
         uses: actions/upload-artifact@v7
         with:
-          name: litematica-printer-server
-          path: serverCompanion/build/libs/*.jar
+          name: litematica-printer-server-26.1.2
+          path: |
+            serverCompanion/build/libs/*.jar
+            !serverCompanion/build/libs/*+mc26.3.jar
+          if-no-files-found: error
+          retention-days: 1
+          archive: false
+
+      - name: Capture 26.3 server companion jar
+        uses: actions/upload-artifact@v7
+        with:
+          name: litematica-printer-server-26.3
+          path: serverCompanion/build/libs/*+mc26.3.jar
           if-no-files-found: error
           retention-days: 1
           archive: false
