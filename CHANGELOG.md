@@ -2,6 +2,28 @@
 
 所有显著变更均记录在此文件中，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [0.9.1] - 2026-10-02
+
+### 新增
+
+- 支持 Minecraft Java Edition 26.3（客户端与服务端伴生模组）。
+
+### 改进
+
+- 26.1.2 依赖更新为 MaLiLib 0.28.12、Litematica 0.27.14、Tweakeroo 0.28.10（旧版本已从上游 Maven 仓库下架）。
+- 发布流程同时构建 26.1.2 与 26.3 两套客户端和服务端伴生 JAR。
+
+### 修复
+
+- 修复 26.2 构建节点因过期的覆盖文件而无法编译的问题。
+
+### 兼容性
+
+- Minecraft Java Edition 26.1.2 或 26.3。
+- 26.1.2：Fabric Loader 0.19.1 或更高版本、MaLiLib 0.28.12、Litematica 0.27.14。
+- 26.3：Fabric Loader 0.19.5 或更高版本、MaLiLib 0.30.2、Litematica 0.29.1。
+- Java 25。
+
 ## [0.9.0] - 2026-08-01
 
 ### 新增

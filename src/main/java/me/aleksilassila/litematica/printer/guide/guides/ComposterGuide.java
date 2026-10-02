@@ -42,7 +42,7 @@ public class ComposterGuide extends Guide {
         if (!whitelist.equals(compostWhitelistCache)) {
             compostWhitelistCache = new ArrayList<>(whitelist);
             List<Item> whitelistItems = new ArrayList<>();
-            for (Item item : Reference.COMPOSTABLE_ITEMS) {
+            for (Item item : Reference.compostableItems()) {
                 for (String rule : whitelist) {
                     if (FilterUtils.matchName(rule, new ItemStack(item))) {
                         whitelistItems.add(item);
@@ -53,7 +53,7 @@ public class ComposterGuide extends Guide {
             whitelistItemsCache = whitelistItems.toArray(Item[]::new);
         }
 
-        Item[] finalItems = whitelistItemsCache.length > 0 ? whitelistItemsCache : Reference.COMPOSTABLE_ITEMS;
+        Item[] finalItems = whitelistItemsCache.length > 0 ? whitelistItemsCache : Reference.compostableItems();
         if (finalItems.length > 0) {
             return Result.success(new ClickAction().setItems(finalItems));
         }

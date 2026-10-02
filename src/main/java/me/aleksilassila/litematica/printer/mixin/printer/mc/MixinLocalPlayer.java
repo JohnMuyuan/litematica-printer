@@ -67,7 +67,11 @@ public class MixinLocalPlayer extends AbstractClientPlayer {
     }
 
     @Inject(method = "openTextEdit", at = @At("HEAD"), cancellable = true)
-    //#if MC > 11904
+    //#if MC >= 260300
+    //$$ public void openTextEdit(SignBlockEntity sign, net.minecraft.world.level.block.entity.SignTextSlot slot, CallbackInfo ci) {
+    //$$     openEditSignScreen(sign, slot, ci);
+    //$$ }
+    //#elseif MC > 11904
     public void openTextEdit(SignBlockEntity sign, boolean front, CallbackInfo ci) {
         openEditSignScreen(sign, front, ci);
     }
@@ -78,14 +82,24 @@ public class MixinLocalPlayer extends AbstractClientPlayer {
     //#endif
 
     @Unique
+    //#if MC >= 260300
+    //$$ public void openEditSignScreen(SignBlockEntity sign, net.minecraft.world.level.block.entity.SignTextSlot front, CallbackInfo ci) {
+    //#else
     public void openEditSignScreen(SignBlockEntity sign, boolean front, CallbackInfo ci) {
+    //#endif
         if (!Configs.Core.WORK_SWITCH.getBooleanValue()
                 || !ActionManager.INSTANCE.isPrintInteractionActive()) {
             return;
         }
         getTargetSignEntity(sign).ifPresent(signBlockEntity ->
         {
-            //#if MC > 11904
+            //#if MC >= 260300
+            //$$ java.util.List<net.minecraft.network.chat.Component> messages = signBlockEntity.getText(front).getMessages(false);
+            //$$ String line1 = messages.get(0).getString();
+            //$$ String line2 = messages.get(1).getString();
+            //$$ String line3 = messages.get(2).getString();
+            //$$ String line4 = messages.get(3).getString();
+            //#elseif MC > 11904
             String line1 = signBlockEntity.getText(front).getMessage(0, false).getString();
             String line2 = signBlockEntity.getText(front).getMessage(1, false).getString();
             String line3 = signBlockEntity.getText(front).getMessage(2, false).getString();
@@ -96,6 +110,9 @@ public class MixinLocalPlayer extends AbstractClientPlayer {
             //$$ String line3 = signBlockEntity.getMessage(2, false).getString();
             //$$ String line4 = signBlockEntity.getMessage(3, false).getString();
             //#endif
+            //#if MC >= 260300
+            //$$ ServerboundSignUpdatePacket packet = new ServerboundSignUpdatePacket(sign.getBlockPos(), java.util.List.of(line1, line2, line3, line4), front);
+            //#else
             ServerboundSignUpdatePacket packet = new ServerboundSignUpdatePacket(sign.getBlockPos(),
                     //#if MC > 11904
                     front,
@@ -105,6 +122,7 @@ public class MixinLocalPlayer extends AbstractClientPlayer {
                     line3,
                     line4
             );
+            //#endif
             this.connection.send(packet);
             ci.cancel();
         });

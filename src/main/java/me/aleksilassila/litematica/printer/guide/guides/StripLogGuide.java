@@ -8,7 +8,13 @@ import me.aleksilassila.litematica.printer.printer.SchematicBlockContext;
 import me.aleksilassila.litematica.printer.printer.action.Action;
 import me.aleksilassila.litematica.printer.printer.action.ClickAction;
 import me.aleksilassila.litematica.printer.Reference;
+//#if MC >= 260300
+//$$ import net.minecraft.core.registries.BuiltInRegistries;
+//$$ import net.minecraft.resources.Identifier;
+//$$ import java.util.HashMap;
+//#else
 import net.fabricmc.fabric.mixin.content.registry.AxeItemAccessor;
+//#endif
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -20,8 +26,24 @@ import java.util.Map;
  */
 public class StripLogGuide extends Guide {
 
+    //#if MC >= 260300
+    //$$ // Stripping is a data-driven block transformer since 26.3; every strippable block has a "stripped_" twin
+    //$$ private static final Map<Block, Block> STRIPPED_LOGS = collectStrippables();
+    //$$
+    //$$ private static Map<Block, Block> collectStrippables() {
+    //$$     Map<Block, Block> strippables = new HashMap<>();
+    //$$     for (Block stripped : BuiltInRegistries.BLOCK) {
+    //$$         Identifier id = BuiltInRegistries.BLOCK.getKey(stripped);
+    //$$         if (!id.getPath().startsWith("stripped_")) continue;
+    //$$         Identifier source = Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath().substring("stripped_".length()));
+    //$$         BuiltInRegistries.BLOCK.getOptional(source).ifPresent(block -> strippables.put(block, stripped));
+    //$$     }
+    //$$     return strippables;
+    //$$ }
+    //#else
     @SuppressWarnings("all")
     private static final Map<Block, Block> STRIPPED_LOGS = AxeItemAccessor.getStrippables();
+    //#endif
 
     public StripLogGuide(SchematicBlockContext context) {
         super(context);
