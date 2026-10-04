@@ -10,7 +10,7 @@ on:
 
 env:
   IS_THIS_RELEASE: true
-  TARGET_MC_VERSIONS: 26.1
+  TARGET_MC_VERSIONS: 26.1,26.3
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
@@ -41,16 +41,20 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build Minecraft 26.1.2 client and server companion
-        run: ./gradlew :26.1:build :serverCompanion:build --stacktrace --console=plain
+      - name: Build Minecraft 26.1.2 and 26.3 clients and the 26.1.2 server companion
+        run: ./gradlew :26.1:build :26.3:build :serverCompanion:build --stacktrace --console=plain
+
+      - name: Build Minecraft 26.3 server companion
+        run: ./gradlew :serverCompanion:build -Pserver_mc=26.3 --stacktrace --console=plain
 
       - name: Collect release files
         shell: bash
         run: |
           mkdir -p release-artifacts
           find versions/26.1/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-sources.jar" -exec cp {} release-artifacts/ \;
+          find versions/26.3/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-sources.jar" -exec cp {} release-artifacts/ \;
           find serverCompanion/build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-sources.jar" -exec cp {} release-artifacts/ \;
-          test "$(find release-artifacts -maxdepth 1 -type f -name '*.jar' | wc -l)" -eq 2
+          test "$(find release-artifacts -maxdepth 1 -type f -name '*.jar' | wc -l)" -eq 4
           cd release-artifacts
           sha256sum *.jar > SHA256SUMS.txt
           cat SHA256SUMS.txt

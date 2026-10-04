@@ -72,7 +72,11 @@ public final class AutoEater {
                 || me.aleksilassila.litematica.printer.printer.zxy.inventory.InventoryUtils.hasPendingSwitchRequest()
                 || me.aleksilassila.litematica.printer.printer.zxy.inventory.InventoryUtils.isOpenHandler
                 || TakeItOutUtils.isAwaitingStack()
+                //#if MC >= 260200
+                //$$ || MC.gui.screen() != null
+                //#else
                 || MC.screen != null
+                //#endif
                 || player.containerMenu != player.inventoryMenu) {
             return;
         }

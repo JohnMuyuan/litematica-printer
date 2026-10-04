@@ -10,15 +10,15 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| Minecraft Java Edition | 26.1.2 |
-| Fabric Loader | 0.19.1 或更高版本 |
+| Minecraft Java Edition | 26.1.2 或 26.3 |
+| Fabric Loader | 0.19.1 或更高版本（26.3 需要 0.19.5 或更高版本） |
 | Java | JDK 25 |
 | Fabric API | 必需 |
 | MaLiLib | 客户端必需 |
 | Litematica | 客户端必需 |
 | QuickShulker | 潜影盒相关功能可选 |
 
-仓库中保留了上游多版本构建结构，但当前正式发布和测试目标仅为 **Minecraft 26.1.2**。其他版本不在本版本的兼容承诺范围内。
+仓库中保留了上游多版本构建结构，但当前正式发布和测试目标仅为 **Minecraft 26.1.2 与 26.3**。其他版本不在本版本的兼容承诺范围内。
 
 ## 功能
 
@@ -40,7 +40,7 @@
 1. Fabric API
 2. MaLiLib
 3. Litematica
-4. `litematica-printer-0.8.0+mc26.1.2.jar`
+4. `litematica-printer-0.9.1+mc26.1.2.jar`（26.3 使用 `litematica-printer-0.9.1+mc26.3.jar`）
 5. QuickShulker（仅在需要潜影盒功能时安装）
 
 单人存档不需要安装服务端伴生 JAR。
@@ -50,7 +50,7 @@
 客户端按上面的单人游戏方式安装。服务器的 `mods` 文件夹另外安装：
 
 1. Fabric API
-2. `litematica-printer-server-0.8.0.jar`
+2. `litematica-printer-server-0.9.1.jar`（26.3 使用 `litematica-printer-server-0.9.1+mc26.3.jar`）
 
 服务器不需要安装客户端 `litematica-printer` JAR。客户端和服务端伴生模组的主版本必须一致。
 
@@ -80,15 +80,18 @@
 ```powershell
 $env:JAVA_HOME = 'C:\Users\7ipny\AppData\Roaming\.minecraft\runtime\java-runtime-epsilon'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
-$env:TARGET_MC_VERSIONS = '26.1'
-.\gradlew.bat :26.1:build :serverCompanion:build --stacktrace --console=plain
+$env:TARGET_MC_VERSIONS = '26.1,26.3'
+.\gradlew.bat :26.1:build :26.3:build :serverCompanion:build --stacktrace --console=plain
+.\gradlew.bat :serverCompanion:build -Pserver_mc='26.3' --stacktrace --console=plain
 ```
 
 构建产物位于：
 
 ```text
-versions/26.1/build/libs/litematica-printer-0.8.0-local+mc26.1.2.jar
-serverCompanion/build/libs/litematica-printer-server-0.8.0-local.jar
+versions/26.1/build/libs/litematica-printer-0.9.1-local+mc26.1.2.jar
+versions/26.3/build/libs/litematica-printer-0.9.1-local+mc26.3.jar
+serverCompanion/build/libs/litematica-printer-server-0.9.1-local.jar
+serverCompanion/build/libs/litematica-printer-server-0.9.1-local+mc26.3.jar
 ```
 
 GitHub Release 工作流会生成不带 `-local` 的正式文件，并同时提供 `SHA256SUMS.txt`。

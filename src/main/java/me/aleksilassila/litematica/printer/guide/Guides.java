@@ -148,7 +148,11 @@ public class Guides {
         register(ComparatorGuide.class, net.minecraft.world.level.block.ComparatorBlock.class);
 
         // 红石线（点状/十字形）
+        //#if MC >= 260300
+        //$$ register(RedstoneWireGuide.class, RedstoneWireBlock.class);
+        //#else
         register(RedstoneWireGuide.class, RedStoneWireBlock.class);
+        //#endif
 
         // 拉杆
         register(LeverGuide.class, LeverBlock.class);
@@ -201,7 +205,11 @@ public class Guides {
         // ============================================================
 
         // 耕地/土径
+        //#if MC >= 260300
+        //$$ register(SoilGuide.class, FarmlandBlock.class, PathBlock.class);
+        //#else
         register(SoilGuide.class, FarmlandBlock.class, DirtPathBlock.class);
+        //#endif
 
         // 花盆
         register(FlowerPotGuide.class, FlowerPotBlock.class);
