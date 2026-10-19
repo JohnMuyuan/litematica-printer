@@ -1,91 +1,91 @@
 # Litematica Printer
 
-> 本模组已在 GitHub 免费开源，若付费购买请立刻退款！作者主页 YP.MK
+> This mod is free and open source on GitHub. If you paid for it, request a refund.
 
-面向 Litematica 的 Fabric 自动化施工工具，提供批量放置、挖掘、填充、排流体、区域清除、破基岩、掉落物吸附和潜影盒收纳。
+A Fabric automation tool for Litematica, offering schematic placement, mining, filling, fluid draining, area clearing, bedrock breaking, item attraction, and shulker-box storage.
 
-作者：**江木源（JohnMuyuan）**
+Maintained by **JohnMuyuan**.
 
-## 当前发布版本
+## Current release requirements
 
-| 项目 | 要求 |
+| Component | Requirement |
 | --- | --- |
-| Minecraft Java Edition | 26.1.2 或 26.3 |
-| Fabric Loader | 0.19.1 或更高版本（26.3 需要 0.19.5 或更高版本） |
+| Minecraft Java Edition | 26.1.2 or 26.3 |
+| Fabric Loader | 0.19.1+; 26.3 requires 0.19.5+ |
 | Java | JDK 25 |
-| Fabric API | 必需 |
-| MaLiLib | 客户端必需 |
-| Litematica | 客户端必需 |
-| QuickShulker | 潜影盒相关功能可选 |
+| Fabric API | Required |
+| MaLiLib | Required on the client |
+| Litematica | Required on the client |
+| QuickShulker | Optional, for shulker-box features |
 
-仓库中保留了上游多版本构建结构，但当前正式发布和测试目标仅为 **Minecraft 26.1.2 与 26.3**。其他版本不在本版本的兼容承诺范围内。
+The repository retains the upstream multi-version build structure, but current releases and testing target **Minecraft 26.1.2 and 26.3** only. Other versions are outside the current compatibility commitment.
 
-## 功能
+## Features
 
-- 按投影批量放置方块，并处理常见方块状态和朝向。
-- 在选区内批量挖掘、填充、替换和排流体。
-- 清除模式按 **排流体 -> 普通挖掘 -> 破基岩** 的阶段顺序运行。
-- 内置并发破基岩控制器，支持服务器确认、有限重试和吞吐量配置。
-- 工作总开关启用时自动吸附附近掉落物。
-- 吸附过滤可跟随挖掘黑白名单、吸附全部、仅吸附破基岩材料或使用独立名单。
-- 可将掉落物自动收纳进背包中的潜影盒，潜影盒不可用或已满时回退到普通背包。
-- 服务端伴生模组为多人服务器提供经过服务端验证的批处理、方块操作和物品拾取。
+- Batch placement from schematics, including common block states and orientations.
+- Batch mining, filling, replacement, and fluid draining within a selection.
+- Clearing proceeds through **fluid draining → normal mining → bedrock breaking**.
+- Concurrent bedrock-breaking controller with server confirmation, bounded retries, and configurable throughput.
+- Automatic attraction of nearby dropped items while the main work toggle is enabled.
+- Attraction filters can follow the mining allowlist/blocklist, collect everything, collect only bedrock-breaking materials, or use a separate list.
+- Automatic storage in inventory shulker boxes, falling back to the normal inventory when boxes are unavailable or full.
+- A server companion provides server-validated batching, block operations, and item collection in multiplayer.
 
-## 安装
+## Installation
 
-### 单人游戏
+### Single player
 
-将以下模组放入客户端 `mods` 文件夹：
+Put these mods in the client's `mods` folder:
 
 1. Fabric API
 2. MaLiLib
 3. Litematica
-4. `litematica-printer-0.9.1+mc26.1.2.jar`（26.3 使用 `litematica-printer-0.9.1+mc26.3.jar`）
-5. QuickShulker（仅在需要潜影盒功能时安装）
+4. `litematica-printer-0.9.1+mc26.1.2.jar`, or `litematica-printer-0.9.1+mc26.3.jar` for 26.3
+5. QuickShulker, if shulker-box features are needed
 
-单人存档不需要安装服务端伴生 JAR。
+Single-player worlds do not require the server companion JAR.
 
-### 多人服务器
+### Multiplayer
 
-客户端按上面的单人游戏方式安装。服务器的 `mods` 文件夹另外安装：
+Install the client as above. Also put these in the server's `mods` folder:
 
 1. Fabric API
-2. `litematica-printer-server-0.9.1.jar`（26.3 使用 `litematica-printer-server-0.9.1+mc26.3.jar`）
+2. `litematica-printer-server-0.9.1.jar`, or `litematica-printer-server-0.9.1+mc26.3.jar` for 26.3
 
-服务器不需要安装客户端 `litematica-printer` JAR。客户端和服务端伴生模组的主版本必须一致。
+The server does not need the client `litematica-printer` JAR. The client and companion must use the same major version.
 
-| 环境 | 基本客户端操作 | 服务端批处理/同步 | 多人范围吸附 |
+| Environment | Basic client operations | Server batching/sync | Multiplayer area attraction |
 | --- | --- | --- | --- |
-| 单人存档 | 支持 | 本地直接执行 | 支持 |
-| 多人服务器，仅安装客户端 | 可能受延迟或反作弊限制 | 不支持 | 不支持 |
-| 多人服务器，双方正确安装 | 支持 | 支持 | 支持 |
+| Single player | Supported | Executed locally | Supported |
+| Multiplayer, client only | May be limited by latency or anticheat | Unsupported | Unsupported |
+| Multiplayer, both installed correctly | Supported | Supported | Supported |
 
-客户端未检测到服务器伴生模组时，需要服务端支持的配置项会显示黄色提示。部分普通客户端交互仍可能可用，但不能保证与单人存档相同的速度和准确性。
+Options requiring the companion show a yellow notice when it is not detected. Some ordinary client interactions may still work, but single-player speed and accuracy are not guaranteed.
 
-## 使用注意
+## Usage notes
 
-![Litematica 选区模式设置为「简单」](预设位置.png)
+![Set the Litematica selection mode to Simple](预设位置.png)
 
-区域清除、批量挖掘和填充等选区功能基于 Litematica 的选区。请在 Litematica 的选区模式中选择 **简单（Simple）** 模式，多角盒（Corners）与展开（Expand）模式目前仅作部分支持。
+Area clearing, batch mining, and filling use Litematica selections. Choose **Simple** selection mode; Corners and Expand currently have partial support only.
 
-- 破基岩模式仅适用于生存或冒险模式，需要活塞、红石火把、黏液块，以及能够秒挖活塞的工具和状态。
-- 每刻任务数越高，对服务器 TPS、网络延迟和背包补给速度的要求越高。出现失败或机器重叠时应先降低吞吐量。
-- 服务器反作弊、交互速率限制或区域保护插件可能拒绝自动操作。
-- 潜影盒自动取出和收纳依赖兼容的 QuickShulker 环境；没有可用潜影盒或空间时，物品会回退到普通背包，背包也满后停止吸附。
+- Bedrock breaking requires survival or adventure mode, pistons, redstone torches, slime blocks, and tools and effects capable of instantly mining pistons.
+- Higher tasks per tick require better server TPS, latency, and inventory resupply. Lower throughput first if operations fail or machines overlap.
+- Server anticheat, interaction rate limits, and region protection may reject automatic operations.
+- Automatic shulker-box extraction and storage require a compatible QuickShulker environment. Items fall back to the normal inventory when no box or space is available; attraction stops when that inventory is full too.
 
-## 从源码构建
+## Build from source
 
-构建必须使用 JDK 25。Windows PowerShell 示例：
+Use JDK 25. Windows PowerShell example; replace the JDK path with your installation:
 
 ```powershell
-$env:JAVA_HOME = 'C:\Users\7ipny\AppData\Roaming\.minecraft\runtime\java-runtime-epsilon'
+$env:JAVA_HOME = 'C:\path\to\jdk-25'
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 $env:TARGET_MC_VERSIONS = '26.1,26.3'
 .\gradlew.bat :26.1:build :26.3:build :serverCompanion:build --stacktrace --console=plain
 .\gradlew.bat :serverCompanion:build -Pserver_mc='26.3' --stacktrace --console=plain
 ```
 
-构建产物位于：
+Build outputs:
 
 ```text
 versions/26.1/build/libs/litematica-printer-0.9.1-local+mc26.1.2.jar
@@ -94,27 +94,22 @@ serverCompanion/build/libs/litematica-printer-server-0.9.1-local.jar
 serverCompanion/build/libs/litematica-printer-server-0.9.1-local+mc26.3.jar
 ```
 
-GitHub Release 工作流会生成不带 `-local` 的正式文件，并同时提供 `SHA256SUMS.txt`。
+The GitHub Release workflow produces official files without `-local` and includes `SHA256SUMS.txt`.
 
-## 问题报告
+## Reporting issues
 
-提交 Issue 时请附带：
+Include Minecraft, Fabric Loader, Fabric API, Litematica, and MaLiLib versions; whether the matching client and server JARs are installed; reproduction steps, relevant configuration, and full logs. For bedrock issues, also include game mode, tool state, material quantities, server TPS, and latency.
 
-- Minecraft、Fabric Loader、Fabric API、Litematica 和 MaLiLib 版本
-- 客户端与服务端是否都安装了对应 JAR
-- 可复现步骤、相关配置和完整日志
-- 破基岩问题请同时说明游戏模式、工具状态、材料数量、服务器 TPS 和延迟
+Do not publish access tokens or authentication-bearing `profile.json` files in logs.
 
-请勿在日志中公开账号访问令牌或包含认证信息的 `profile.json`。
+## Credits
 
-## 致谢
+- [aleksilassila/litematica-printer](https://github.com/aleksilassila/litematica-printer): original project.
+- [zhaixianyu/litematica-printer](https://github.com/zhaixianyu/litematica-printer): early feature extensions and fixes.
+- [Yur1Ca/litematica-printer](https://github.com/Yur1Ca/litematica-printer): Hana multi-version branch.
+- [MoRanpcy/quickshulker](https://github.com/MoRanpcy/quickshulker) and later versions: quick shulker compatibility.
+- [bunnyi116/fabric-bedrock-miner](https://github.com/bunnyi116/fabric-bedrock-miner): bedrock-breaking implementation reference.
 
-- [aleksilassila/litematica-printer](https://github.com/aleksilassila/litematica-printer)：原始项目。
-- [zhaixianyu/litematica-printer](https://github.com/zhaixianyu/litematica-printer)：早期功能扩展与修复。
-- [Yur1Ca/litematica-printer](https://github.com/Yur1Ca/litematica-printer)：Hana 多版本分支。
-- [MoRanpcy/quickshulker](https://github.com/MoRanpcy/quickshulker) 及其后续版本：快捷潜影盒兼容支持。
-- [bunnyi116/fabric-bedrock-miner](https://github.com/bunnyi116/fabric-bedrock-miner)：破基岩实现参考。
+## License
 
-## 许可证
-
-本项目按照 [GNU Affero General Public License v3.0](LICENSE.md) 发布。分发修改后的模组或提供基于该程序的网络服务时，请遵守 AGPL-3.0 的源代码公开要求，并保留原项目的许可证与归属信息。
+Released under the [GNU Affero General Public License v3.0](LICENSE.md). When distributing modified mods or offering a network service based on this program, comply with AGPL-3.0 source availability requirements and retain the original licenses and attribution.
