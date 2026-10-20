@@ -917,8 +917,9 @@ public final class ScanCache {
         }
 
         /*
-         * 保留旧 section 缓存路径，供后续针对静态快照做专门优化；主扫描不再从这里调度，
-         * 避免 section 成为放置顺序并造成 16x16x16 的成片推进。
+         * section 缓存路径：未开启「破坏多余方块」的打印模式从这里取候选。
+         * 被 preFilter 拒绝的候选(如超出交互距离)只跳过自身，不能丢弃整个 section，
+         * 否则 section 内首个候选够不着时，同 section 内可放置的目标会全部被漏掉。
          */
         private Candidate nextBySectionCache(
                 ClientLevel level,
@@ -931,9 +932,11 @@ public final class ScanCache {
             int advancedSections = 0;
             while (true) {
                 if (this.currentSectionPrepared) {
-                    Candidate candidate = this.nextFromCurrentSection();
-                    if (candidate != null && preFilter.test(candidate.pos())) {
-                        return candidate;
+                    Candidate candidate;
+                    while ((candidate = this.nextFromCurrentSection()) != null) {
+                        if (preFilter.test(candidate.pos())) {
+                            return candidate;
+                        }
                     }
                     this.currentSection = null;
                     this.currentCandidates = ShortArrayBuilder.EMPTY;
