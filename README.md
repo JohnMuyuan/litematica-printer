@@ -40,7 +40,7 @@ Put these mods in the client's `mods` folder:
 1. Fabric API
 2. MaLiLib
 3. Litematica
-4. `litematica-printer-0.9.1+mc26.1.2.jar`, or `litematica-printer-0.9.1+mc26.3.jar` for 26.3
+4. `litematica-printer-0.9.2+mc26.1.2.jar`, or `litematica-printer-0.9.2+mc26.3.jar` for 26.3
 5. QuickShulker, if shulker-box features are needed
 
 Single-player worlds do not require the server companion JAR.
@@ -50,7 +50,7 @@ Single-player worlds do not require the server companion JAR.
 Install the client as above. Also put these in the server's `mods` folder:
 
 1. Fabric API
-2. `litematica-printer-server-0.9.1.jar`, or `litematica-printer-server-0.9.1+mc26.3.jar` for 26.3
+2. `litematica-printer-server-0.9.2.jar`, or `litematica-printer-server-0.9.2+mc26.3.jar` for 26.3
 
 The server does not need the client `litematica-printer` JAR. The client and companion must use the same major version.
 
@@ -88,10 +88,10 @@ $env:TARGET_MC_VERSIONS = '26.1,26.3'
 Build outputs:
 
 ```text
-versions/26.1/build/libs/litematica-printer-0.9.1-local+mc26.1.2.jar
-versions/26.3/build/libs/litematica-printer-0.9.1-local+mc26.3.jar
-serverCompanion/build/libs/litematica-printer-server-0.9.1-local.jar
-serverCompanion/build/libs/litematica-printer-server-0.9.1-local+mc26.3.jar
+versions/26.1/build/libs/litematica-printer-0.9.2-local+mc26.1.2.jar
+versions/26.3/build/libs/litematica-printer-0.9.2-local+mc26.3.jar
+serverCompanion/build/libs/litematica-printer-server-0.9.2-local.jar
+serverCompanion/build/libs/litematica-printer-server-0.9.2-local+mc26.3.jar
 ```
 
 The GitHub Release workflow produces official files without `-local` and includes `SHA256SUMS.txt`.

@@ -2,11 +2,18 @@
 
 所有显著变更均记录在此文件中，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
-## [未发布]
+## [0.9.2] - 2026-10-20
 
 ### 修复
 
 - 修复打印模式在未开启“破坏多余方块”时几乎不放置方块的问题：扫描时某个 16×16×16 区段内第一个蓝图方块超出交互距离，会导致整个区段的目标被跳过。
+
+### 兼容性
+
+- Minecraft Java Edition 26.1.2 或 26.3。
+- 26.1.2：Fabric Loader 0.19.1 或更高版本、MaLiLib 0.28.12、Litematica 0.27.14。
+- 26.3：Fabric Loader 0.19.5 或更高版本、MaLiLib 0.30.2、Litematica 0.29.1。
+- Java 25。
 
 ## [0.9.1] - 2026-10-02
 
